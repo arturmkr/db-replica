@@ -1,6 +1,6 @@
-variable "ubuntu_22_04" {
+variable "ubuntu_20_04" {
   type = string
-  default = "ami-02f3416038bdb17fb"
+  default = "ami-0960ab670c8bb45f3"
 }
 
 variable "public_key" {

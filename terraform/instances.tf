@@ -4,7 +4,7 @@ resource "aws_key_pair" "devops_key" {
 }
 
 resource "aws_instance" "master_db" {
-  ami = var.ubuntu_22_04
+  ami = var.ubuntu_20_04
   instance_type = "t2.micro"
 
   key_name = aws_key_pair.devops_key.key_name
@@ -19,7 +19,7 @@ resource "aws_instance" "master_db" {
 }
 
 resource "aws_instance" "replica_db" {
-  ami = var.ubuntu_22_04
+  ami = var.ubuntu_20_04
   instance_type = "t2.micro"
 
   key_name = aws_key_pair.devops_key.key_name
