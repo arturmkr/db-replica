@@ -1,0 +1,101 @@
+- hosts: db_servers
+  vars_files:
+    - "./vars/default_variables.yml"
+    - "./vars/app_config.yml"
+  remote_user: "{{ default_remote_user }}"
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Update all packages
+      become: true
+      apt:
+        update_cache: yes
+        name: "*"
+        state: latest
+
+    - name: Set hostname
+      hostname:
+        name: "{{ inventory_hostname }}"        
+
+    - name: Install dependencies
+      become: true
+      apt:
+        pkg:
+          - ca-certificates
+          - curl
+          - gnupg2
+          - python3-pip
+          - python3-dev
+          - default-libmysqlclient-dev
+          - build-essential
+          - lsb-release
+          - htop
+
+    - name: Install mysqlclient python package
+      pip:
+        name: mysqlclient
+
+    - name: Add Percona repo
+      apt:
+        deb: "https://repo.percona.com/apt/percona-release_latest.{{ ansible_distribution_release }}_all.deb"          
+
+    - name: Set Percona dist
+      shell: percona-release setup ps80
+
+    - name: Install Percona 8.0
+      apt:
+        name: percona-server-server
+        state: present
+        update_cache: yes  
+
+    - name: Copy conf file
+      template:
+        src: templates/mysqld.cnf.j2
+        dest: /etc/mysql/mysql.conf.d/mysqld.cnf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Restart DB
+      systemd:
+        service: mysql
+        state: restarted
+
+- hosts: master
+  vars_files:
+  - "./vars/default_variables.yml"
+  - "./vars/app_config.yml"
+  remote_user: ubuntu
+  become: true
+  gather_facts: false
+
+  tasks:
+  - name: Create user for replica
+    community.mysql.mysql_user:
+      name: "{{ db_username }}"
+      host: "172.31.%.%"
+      password: "{{ default_remote_user }}"
+      priv: "*.*:REPLICATION SLAVE"
+      state: present
+
+- hosts: replica
+  vars_files:
+  - "./vars/default_variables.yml"
+  - "./vars/app_config.yml"
+  remote_user: "{{ default_remote_user }}"
+  become: true
+  gather_facts: false
+
+  tasks:
+  - name: configure MySQL slave process
+    mysql_replication:
+      master_host: "172.31.29.56"
+      master_user: "{{ db_username }}"
+      master_password: "{{ db_password }}"
+      master_log_file: "{{ db_master_log_file }}"
+      master_log_pos: "{{ db_master_log_pos }}"
+      mode: changeprimary
+  - name: start MySQL slave process
+    mysql_replication:
+      mode: startreplica

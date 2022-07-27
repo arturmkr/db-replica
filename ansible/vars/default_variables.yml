@@ -1,0 +1,3 @@
+default_remote_user: "ubuntu"
+db_master_log_file: "mysql-binlog.000001"
+db_master_log_pos: "684"
